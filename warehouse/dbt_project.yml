@@ -1,0 +1,50 @@
+name: invoice_ledger
+version: 1.0.0
+config-version: 2
+
+profile: invoice_ledger
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Pin seed column types at load time so we never rely on inferred types from CSV text.
+seeds:
+  invoice_ledger:
+    raw_customers:
+      +column_types:
+        customer_id: INTEGER
+        name: VARCHAR
+        created_at: TIMESTAMP
+    raw_invoices:
+      +column_types:
+        invoice_id: INTEGER
+        invoice_number: VARCHAR
+        customer_id: INTEGER
+        issued_at: DATE
+        due_at: DATE
+        status: VARCHAR
+        amount_due: DECIMAL(12,2)
+    raw_invoice_payments:
+      +column_types:
+        payment_id: INTEGER
+        invoice_id: INTEGER
+        amount: DECIMAL(12,2)
+        paid_at: TIMESTAMP
+
+models:
+  invoice_ledger:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

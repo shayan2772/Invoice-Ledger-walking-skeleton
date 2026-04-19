@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_invoices_with_payments
+    description: "One row per invoice with payments rolled up (sum, last paid_at)."
+    columns:
+      - name: invoice_id
+        data_tests:
+          - unique
+          - not_null
+      - name: amount_paid
+        description: "Net sum of payments (refunds subtract)."
+        data_tests:
+          - not_null

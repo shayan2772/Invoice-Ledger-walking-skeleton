@@ -1,0 +1,74 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "One row per customer. Renamed and typed."
+    columns:
+      - name: customer_id
+        description: "Primary key."
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_name
+        data_tests:
+          - not_null
+      - name: created_at
+        data_tests:
+          - not_null
+
+  - name: stg_invoices
+    description: "One row per invoice. Status is lowercase-canonicalized."
+    columns:
+      - name: invoice_id
+        description: "Primary key."
+        data_tests:
+          - unique
+          - not_null
+      - name: invoice_number
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+      - name: issued_at
+        data_tests:
+          - not_null
+      - name: due_at
+        data_tests:
+          - not_null
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['draft', 'open', 'paid', 'void']
+      - name: amount_due
+        data_tests:
+          - not_null
+
+  - name: stg_invoice_payments
+    description: "One row per payment event. Negative amounts = refunds."
+    columns:
+      - name: payment_id
+        description: "Primary key."
+        data_tests:
+          - unique
+          - not_null
+      - name: invoice_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_invoices')
+                field: invoice_id
+      - name: amount
+        data_tests:
+          - not_null
+      - name: paid_at
+        data_tests:
+          - not_null

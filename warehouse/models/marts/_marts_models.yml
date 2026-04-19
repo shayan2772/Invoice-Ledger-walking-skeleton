@@ -1,0 +1,79 @@
+version: 2
+
+# This YAML is the contract. Every column the API serves is declared here.
+# Tests on this model are the gate: a failing test fails `dbt build`, which
+# means the api container's `depends_on: { condition: service_completed_successfully }`
+# keeps the FastAPI service from ever starting against a broken warehouse.
+models:
+  - name: invoice_ledger
+    description: >
+      One row per invoice, with customer name denormalized and payment
+      rollups (`amount_paid`, `balance`, `last_payment_at`) joined in.
+      Consumed by FastAPI via a read-only DuckDB file.
+    columns:
+      - name: invoice_id
+        description: "Stable business identifier. Primary key."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: invoice_number
+        description: "Human-readable invoice number."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: "FK to stg_customers.customer_id."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_customers')
+                field: customer_id
+
+      - name: customer_name
+        description: "Denormalized customer display name."
+        data_tests:
+          - not_null
+
+      - name: issued_at
+        description: "Date the invoice was issued."
+        data_tests:
+          - not_null
+
+      - name: due_at
+        description: "Date payment is due."
+        data_tests:
+          - not_null
+
+      - name: status
+        description: "Lifecycle status. Lowercase enum."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['draft', 'open', 'paid', 'void']
+
+      - name: amount_due
+        description: "Total invoice amount."
+        data_tests:
+          - not_null
+
+      - name: amount_paid
+        description: "Net sum of payments (negative amounts treated as refunds)."
+        data_tests:
+          - not_null
+
+      - name: balance
+        description: "amount_due - amount_paid."
+        data_tests:
+          - not_null
+
+      - name: is_overdue
+        description: "True iff status='open' AND due_at < CURRENT_DATE AND balance > 0."
+        data_tests:
+          - not_null
+
+      - name: last_payment_at
+        description: "Most recent payment timestamp; NULL if no payments."

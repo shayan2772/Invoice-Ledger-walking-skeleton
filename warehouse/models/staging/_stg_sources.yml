@@ -1,0 +1,53 @@
+version: 2
+
+# The `raw` source represents the pre-transformation landing zone.
+# In this walking skeleton the raw tables are materialized from seeds,
+# but declaring them as sources draws the transformation boundary
+# explicitly: staging models only read through `source()`, never
+# directly from seeds. Swapping the seeds for an external loader
+# (Airbyte, Fivetran, etc.) would not require any staging-model edits.
+sources:
+  - name: raw
+    description: "Raw landing zone — mock data checked into `seeds/` as CSV."
+    schema: "{{ target.schema }}"
+    tables:
+      - name: customers
+        identifier: raw_customers
+        description: "One row per customer."
+        columns:
+          - name: customer_id
+            description: "Stable business identifier."
+          - name: name
+            description: "Customer display name."
+          - name: created_at
+            description: "Customer record creation timestamp."
+      - name: invoices
+        identifier: raw_invoices
+        description: "One row per invoice. Status casing is not canonical here."
+        columns:
+          - name: invoice_id
+            description: "Stable business identifier."
+          - name: invoice_number
+            description: "Human-readable invoice number (unique)."
+          - name: customer_id
+            description: "FK to raw.customers."
+          - name: issued_at
+            description: "Date the invoice was issued."
+          - name: due_at
+            description: "Date payment is due."
+          - name: status
+            description: "Lifecycle status — mixed casing; canonicalized in staging."
+          - name: amount_due
+            description: "Total invoice amount (DECIMAL 12,2)."
+      - name: invoice_payments
+        identifier: raw_invoice_payments
+        description: "One row per payment event. Negative amounts represent refunds."
+        columns:
+          - name: payment_id
+            description: "Stable business identifier."
+          - name: invoice_id
+            description: "FK to raw.invoices."
+          - name: amount
+            description: "Payment amount; negative for refunds."
+          - name: paid_at
+            description: "Timestamp of the payment event."

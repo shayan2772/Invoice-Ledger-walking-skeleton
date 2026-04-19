@@ -1,0 +1,12 @@
+.venv/
+target/
+logs/
+dbt_packages/
+.git/
+.env*
+*.duckdb
+*.duckdb.wal
+tests/.pytest_cache/
+Dockerfile
+.dockerignore
+README.md

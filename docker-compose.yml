@@ -1,0 +1,87 @@
+# Invoice Ledger local stack
+#
+# Project name + container_name values make this easy to find in Docker
+# Desktop (stack: "invoice-ledger", containers prefixed with invoice-ledger-).
+#
+# Lifecycle:
+#   dbt-runner  → runs once, builds DuckDB on volume, exits 0 (Exited (0) is OK)
+#   api         → stays up (FastAPI on container port 8000)
+#   web         → stays up (Next.js on container port 3000)
+#
+# Start:  docker compose up --build
+# Stop:   docker compose down
+# Logs:   docker compose logs -f api web
+
+name: invoice-ledger
+
+services:
+  dbt-runner:
+    image: invoice-ledger-dbt-runner:latest
+    container_name: invoice-ledger-dbt-runner
+    build: ./warehouse
+    restart: "no"
+    volumes:
+      - data:/data
+    environment:
+      WAREHOUSE_PATH: ${WAREHOUSE_PATH:-/data/warehouse.duckdb}
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      com.invoice-ledger.role: warehouse-build
+
+  api:
+    image: invoice-ledger-api:latest
+    container_name: invoice-ledger-api
+    build: ./api
+    ports:
+      - "${API_HOST_PORT:-8000}:8000"
+    volumes:
+      # Filesystem-level guarantee: the API process cannot mutate the
+      # warehouse even if its code tried. Defense beyond DuckDB's
+      # read_only=True driver flag.
+      - data:/data:ro
+    environment:
+      WAREHOUSE_PATH: ${WAREHOUSE_PATH:-/data/warehouse.duckdb}
+      APP_ENV: ${APP_ENV:-dev}
+    depends_on:
+      dbt-runner:
+        condition: service_completed_successfully
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/venv/bin/python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/healthz', timeout=2)\" || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    labels:
+      com.invoice-ledger.role: backend
+
+  web:
+    image: invoice-ledger-web:latest
+    container_name: invoice-ledger-web
+    build: ./web
+    ports:
+      - "${WEB_HOST_PORT:-3000}:3000"
+    environment:
+      INTERNAL_API_URL: ${INTERNAL_API_URL:-http://api:8000}
+      NODE_ENV: production
+    depends_on:
+      api:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    labels:
+      com.invoice-ledger.role: frontend
+
+volumes:
+  data:
