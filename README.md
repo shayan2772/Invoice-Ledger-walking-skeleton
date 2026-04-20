@@ -169,7 +169,3 @@ Browser GET /  ->  invoice-ledger-web
 | Web | `npm test` in `web/` (Vitest) |
 
 Optional local runs without Docker: create a venv under `warehouse/` and `api/`, install `dbt-duckdb` and `pip install -e '.[dev]'` for the API, then `dbt build` and `pytest` from those trees; use `npm install` and `npm test` under `web/`.
-
-## Out of scope
-
-Pagination, auth, client-side API calls, incremental dbt, OpenAPI code generation for TypeScript, and CI pipelines are not part of this sample.
